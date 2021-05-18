@@ -1481,7 +1481,7 @@ export interface User extends DirectoryObject {
      * definitions for further information. Returned only on $select.
      */
     ageGroup?: NullableOption<string>;
-    // The licenses that are assigned to the user. Not nullable. Supports $filter.
+    // The licenses that are assigned to the user, including inherited (group-based) licenses. Not nullable. Supports $filter.
     assignedLicenses?: AssignedLicense[];
     // The plans that are assigned to the user. Returned only on $select. Read-only. Not nullable.
     assignedPlans?: AssignedPlan[];
@@ -1511,7 +1511,7 @@ export interface User extends DirectoryObject {
      * The date and time the user was created. The value cannot be modified and is automatically populated when the entity is
      * created. The DateTimeOffset type represents date and time information using ISO 8601 format and is always in UTC time.
      * Property is nullable. A null value indicates that an accurate creation time couldn't be determined for the user.
-     * Returned only on $select. Read-only. Supports $filter with the eq, lt, and ge operators.
+     * Returned only on $select. Read-only. Supports $filter with the eq, ne, le, and ge operators.
      */
     createdDateTime?: NullableOption<string>;
     /**
@@ -1922,7 +1922,7 @@ export interface OAuth2PermissionGrant extends Entity {
      */
     clientId?: string;
     /**
-     * Indicates if authorization is granted for the client application to impersonate all users or only a specific user.
+     * Indicates whether authorization is granted for the client application to impersonate all users or only a specific user.
      * AllPrincipals indicates authorization to impersonate all users. Principal indicates authorization to impersonate a
      * specific user. Consent on behalf of all users can be granted by an administrator. Non-admin users may be authorized to
      * consent on behalf of themselves in some cases, for some delegated permissions. Required. Supports $filter (eq only).
@@ -2305,6 +2305,11 @@ export interface MailFolder extends Entity {
     childFolderCount?: NullableOption<number>;
     // The mailFolder's display name.
     displayName?: NullableOption<string>;
+    /**
+     * Indicates whether the mailFolder is hidden. This property can be set only when creating the folder. Find more
+     * information in Hidden mail folders.
+     */
+    isHidden?: NullableOption<boolean>;
     // The unique identifier for the mailFolder's parent mailFolder.
     parentFolderId?: NullableOption<string>;
     // The number of items in the mailFolder.
@@ -3587,6 +3592,7 @@ export interface B2xIdentityUserFlow extends IdentityUserFlow {
     languages?: NullableOption<UserFlowLanguageConfiguration[]>;
     // The user attribute assignments included in the user flow.
     userAttributeAssignments?: NullableOption<IdentityUserFlowAttributeAssignment[]>;
+    userFlowIdentityProviders?: NullableOption<IdentityProviderBase[]>;
 }
 // tslint:disable-next-line: interface-name
 export interface IdentityProvider extends Entity {
@@ -3652,6 +3658,15 @@ export interface IdentityUserFlowAttributeAssignment extends Entity {
     userAttribute?: NullableOption<IdentityUserFlowAttribute>;
 }
 // tslint:disable-next-line: interface-name
+export interface IdentityProviderBase extends Entity {
+    // The display name of the identity provider.
+    displayName?: NullableOption<string>;
+}
+export interface BuiltInIdentityProvider extends IdentityProviderBase {
+    // The identity provider type. For a B2B scenario, possible values: AADSignup, MicrosoftAccount, EmailOTP. Required.
+    identityProviderType?: NullableOption<string>;
+}
+// tslint:disable-next-line: interface-name
 export interface IdentityUserFlowAttribute extends Entity {
     /**
      * The data type of the user flow attribute. This cannot be modified after the custom user flow attribute is created. The
@@ -3675,6 +3690,7 @@ export interface IdentityContainer extends Entity {
     conditionalAccess?: NullableOption<ConditionalAccessRoot>;
     apiConnectors?: NullableOption<IdentityApiConnector[]>;
     b2xUserFlows?: NullableOption<B2xIdentityUserFlow[]>;
+    identityProviders?: NullableOption<IdentityProviderBase[]>;
     userFlowAttributes?: NullableOption<IdentityUserFlowAttribute[]>;
 }
 export interface ConditionalAccessRoot extends Entity {
@@ -3683,6 +3699,23 @@ export interface ConditionalAccessRoot extends Entity {
 }
 // tslint:disable-next-line: interface-name no-empty-interface
 export interface IdentityCustomUserFlowAttribute extends IdentityUserFlowAttribute {}
+export interface SocialIdentityProvider extends IdentityProviderBase {
+    /**
+     * The client identifier for the application obtained when registering the application with the identity provider.
+     * Required.
+     */
+    clientId?: NullableOption<string>;
+    /**
+     * The client secret for the application that is obtained when the application is registered with the identity provider.
+     * This is write-only. A read operation returns '****'. Required.
+     */
+    clientSecret?: NullableOption<string>;
+    /**
+     * For a B2B scenario, possible values: Google, Facebook. For a B2C scenario, possible values: Microsoft, Google, Amazon,
+     * LinkedIn, Facebook, GitHub, Twitter, Weibo, QQ, WeChat. Required.
+     */
+    identityProviderType?: NullableOption<string>;
+}
 // tslint:disable-next-line: no-empty-interface
 export interface UserFlowLanguagePage extends Entity {}
 export interface AdministrativeUnit extends DirectoryObject {
@@ -11665,16 +11698,9 @@ export interface Initiator extends Identity {
     initiatorType?: NullableOption<InitiatorType>;
 }
 export interface KeyValue {
-    /**
-     * Contains the name of the field that a value is associated with. When a sign in or domain hint is included in the
-     * sign-in request, corresponding fields are included as key-value pairs. Possible keys: Login hint present, Domain hint
-     * present.
-     */
+    // Key.
     key?: NullableOption<string>;
-    /**
-     * Contains the corresponding value for the specified key. The value is true if a sign in hint was included in the sign-in
-     * request; otherwise false. The value is true if a domain hint was included in the sign-in request; otherwise false.
-     */
+    // Value.
     value?: NullableOption<string>;
 }
 export interface ModifiedProperty {
@@ -15097,9 +15123,19 @@ export interface IPv6Range extends IpRange {
     upperAddress?: string;
 }
 export interface KeyValuePair {
-    // Name for this key-value pair
+    /**
+     * Name for this key-value pair. Possible names are: AdditionalWSFedEndpointCheckResult,
+     * AllowedAuthenticationClassReferencesCheckResult, AlwaysRequireAuthenticationCheckResult, AutoUpdateEnabledCheckResult,
+     * ClaimsProviderNameCheckResult, EncryptClaimsCheckResult, EncryptedNameIdRequiredCheckResult,
+     * MonitoringEnabledCheckResult,NotBeforeSkewCheckResult, RequestMFAFromClaimsProvidersCheckResult,
+     * SignedSamlRequestsRequiredCheckResult, AdditionalAuthenticationRulesCheckResult, TokenLifetimeCheckResult,
+     * DelegationAuthorizationRulesCheckResult, IssuanceAuthorizationRulesCheckResult, IssuanceTransformRulesCheckResult.
+     */
     name?: string;
-    // Value for this key-value pair
+    /**
+     * Value for this key-value pair. Possible result values are 0 (when the validation check passed), 1 (when the validation
+     * check failed), or 2 (when the validation check is a warning).
+     */
     value?: NullableOption<string>;
 }
 export interface ManagedAppDiagnosticStatus {
@@ -17226,4 +17262,17 @@ export namespace CallRecords {
          */
         role?: ServiceRole;
     }
+}
+export namespace ExternalConnectors {
+    type ExternalItemContentType = "text" | "html" | "unknownFutureValue";
+    interface ExternalItem extends microsoftgraph.Entity {
+        content?: NullableOption<ExternalItemContent>;
+        properties?: NullableOption<Properties>;
+    }
+    interface ExternalItemContent {
+        type?: ExternalItemContentType;
+        value?: NullableOption<string>;
+    }
+// tslint:disable-next-line: no-empty-interface
+    interface Properties {}
 }
